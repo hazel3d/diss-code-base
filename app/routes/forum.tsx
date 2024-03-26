@@ -1,4 +1,4 @@
-import { json } from '@remix-run/node';
+import { json, redirect, type ActionFunctionArgs} from '@remix-run/node';
 import { PrismaClient } from '@prisma/client'
 import { useLoaderData } from '@remix-run/react';
 
@@ -23,6 +23,22 @@ export async function loader() {
     return json({posts, comments, users})
 }
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+    const formData = await request.formData();
+    const title = formData.get('title')?.toString() ?? "";
+    const comment = formData.get('comment')?.toString() ?? "";
+
+    await prisma.post.create({
+        data: {
+            title: title ,
+            body: comment,
+            authorId: 1
+        }
+    })
+
+    return redirect("/forum");
+};
+
 export default function Index() {
     const { posts, users } = useLoaderData<typeof loader>();
 
@@ -35,18 +51,26 @@ export default function Index() {
                 <section className="py-8 lg:py-16">
                     <div className="max-w-fit mx-auto px-4">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Recent Posts</h2>
+                            <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Make a Post</h2>
                         </div>
-                        <form method="post" className="mb-6">
+                        <form method="post" action="/forum" className="mb-6">
+                            <div className="py-1 px-8 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                                <label htmlFor="title">Title</label>
+                                <textarea name="title" id="title" rows={ 1 } className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800"
+                                    placeholder="Enter a title..." required></textarea>
+                            </div>
                             <div className="py-4 px-8 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                                <label htmlFor="comment" className="sr-only">Your comment</label>
-                                <textarea id="comment" rows={ 6 } className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800" 
+                                <label htmlFor="comment">Your comment</label>
+                                <textarea name="comment" id="comment" rows={ 6 } className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800" 
                                 placeholder="Write a comment..." required></textarea>
                             </div>
-                            <button type="submit" className="inline-flex items-center outline py-2.5 px-4 text-xs font-medium text-center text-gray-900 bg-primary-700 rounded-lg focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-900 hover:bg-primary-800">
-                                Post comment
+                            <button type="submit" className="inline-flex items-center outline py-2.5 px-6 text-xs font-medium text-center text-gray-900 bg-primary-700 rounded-lg focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-900 hover:bg-primary-800">
+                                Post!
                             </button>
                         </form>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Recent Posts</h2>
+                        </div>
 
                         { posts.map( (p) => (
                             <article key={ p.id } className="p-6 text-base bg-white rounded-lg dark:bg-gray-900">
