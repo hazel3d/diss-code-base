@@ -1,26 +1,59 @@
-import { json, type MetaFunction } from "@remix-run/node";
+import { PrismaClient } from "@prisma/client";
+import { useState } from 'react';
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import {
-    APIProvider,
-    Map,
-    AdvancedMarker,
-    Pin,
-    InfoWindow
-} from "@vis.gl/react-google-maps"
+import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin, } from "@vis.gl/react-google-maps"
 
+const prisma = new PrismaClient();
+
+// For this part of the database the longitude tag was repurposed as pluscode
 export async function loader() {
-    return json({ apiKey: process.env.API_KEY });
+    const locationsFromServer = await prisma.location.findMany();
+    const geoApiKey = process.env.GEO_API_KEY;
+    const apiKey = process.env.API_KEY;
+    const promises: Promise<any>[] = [];
+
+    locationsFromServer.forEach((location) => {
+        promises.push(fetch(encodeURI(`https://plus.codes/api?address=${location.pluscode}&key=${geoApiKey}`).replace('+', '%2B'))
+            .then(response => response.json())
+            .then(response => ({ ...location, loc: response.plus_code.geometry.location }))
+            );
+    })
+
+    const data = await Promise.all(promises);
+
+    return json({ data, apiKey });
 }
 
 export default function Index() {
-    const { apiKey } = useLoaderData<typeof loader>();
+    const { data, apiKey } = useLoaderData<typeof loader>();
+    const [infowindowOpen, setInfowindowOpen] = useState(false);
     const position = { lat: 55.862, lng: -4.247 };
+    const colour = ["red", "orange", "yellow", "olive", "lime"];
 
     return (
         <APIProvider apiKey={apiKey ?? ""}>
             <div id="map" className="absolute size-full h-[calc(100vh-80px)]">
-                <Map defaultZoom={10} defaultCenter={ position } mapId="4616fdc1c50c696b">
+                <Map defaultZoom={ 10 } defaultCenter={ position } mapId="4616fdc1c50c696b">
+                    { data.map((location) => {
+                        return (
+                            <>                            
+                                <AdvancedMarker key={location.id} position={ location.loc } title={ location.title } onClick={() => setInfowindowOpen(true)}>
+                                    <Pin background={ colour[location.rating - 1] } borderColor={ "black" } glyphColor={ "black" }/>
+                                </AdvancedMarker>
 
+                                {infowindowOpen && (
+                                    <InfoWindow key={location.id} position={location.loc} onCloseClick={() => setInfowindowOpen(false)}>
+                                        <div>
+                                            <h1> { location.title } </h1>
+                                            <p> Review: { location.body } </p>
+                                            <p> Experience: { location.rating } stars </p>
+                                        </div>
+                                    </InfoWindow>
+                                )}
+                            </>
+                        )
+                    })}
                 </Map>
             </div>
         </APIProvider>
