@@ -1,13 +1,3 @@
-import type { MetaFunction } from "@remix-run/node";
-// import {} from "flowbite-react";
-
-export const meta: MetaFunction = () => {
-  return [
-    { title: "Trans-Maps" },
-    { name: "description", content: "Trans-Maps - A trans review website." },
-  ];
-};
-
 export default function Index() {
   return ( 
     <p className="text-center p-10">

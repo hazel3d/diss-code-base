@@ -7,7 +7,6 @@ const prisma = new PrismaClient();
 // Loading in all of the posts and people who have posted when the page loads
 export async function loader() {
     const posts = await prisma.post.findMany();
-    const comments = await prisma.comment.findMany();
     const userIds: Array<number> = [];
     
     // Adds all users that have posted to an array to search up
@@ -23,7 +22,7 @@ export async function loader() {
         select: { id: true, username: true}
     });
 
-    return json({posts, comments, users})
+    return json({posts, users})
 }
 
 // Runs on submission of post on the forum
@@ -54,6 +53,8 @@ export default function Index() {
             <div id="feed">
                 <section className="py-8 lg:py-16">
                     <div className="max-w-fit mx-auto px-4">
+
+                        {/* Form for submitting a post */}
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Make a Post</h2>
                         </div>
@@ -76,6 +77,7 @@ export default function Index() {
                             <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Recent Posts</h2>
                         </div>
 
+                        {/* Loads all posts */}
                         { posts.map( (p) => (
                             <article key={ p.id } className="p-6 text-base bg-white rounded-lg dark:bg-gray-900">
                                 <footer className="flex justify-between items-center mb-2">

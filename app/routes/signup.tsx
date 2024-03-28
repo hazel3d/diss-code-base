@@ -1,31 +1,21 @@
 import { redirect, type ActionFunctionArgs, LoaderFunctionArgs, json } from '@remix-run/node';
 import { PrismaClient } from '@prisma/client'
-import { createUserSession } from "../session.server";
-import { useLoaderData } from '@remix-run/react'; 
+import { useActionData } from '@remix-run/react'; 
 
 const prisma = new PrismaClient();
 
-//Cookie loading taken from the remix docs
 export async function loader({ request }: LoaderFunctionArgs) {
-    const session = await getSession( request );
+    const session = request.headers.get("cookie")?.split('=')[1] ?? "";
 
-    if (session.has("userId")) {
+    if (session != "") {
         return redirect("/profile");
     }
-
-    const data = { error: session.get("error") };
-    return json(data, {
-        headers: {
-            "Set-Cookie": await commitSession(session),
-        },
-    });
 }
 
 export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const username = formData.get('username')?.toString() ?? "";
     const password = formData.get('password')?.toString() ?? "";
-    const session = await getSession(request.headers.get("Cookie"));
 
     const user = await prisma.user.findFirst({where: { username: username }});
 
@@ -36,26 +26,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 password: password
             }
         })
-        session.set("userId", username);
 
-        return redirect("/profile", {headers: { "Set-Cookie": await commitSession( session ) }} );
+        new Response("", {
+            headers: {
+                "Set-Cookie": ("user=" + username)
+            }
+        });
+
+        return redirect("/profile");
     }
 
-    session.flash("error", "User already exists");
-    return redirect("/signup");
+    return json({ message: "User already exists." });
 };
 
 export default function Index() {
-    const { error } = useLoaderData<typeof loader>();
+    const error = useActionData<typeof action>()?.message ?? "";
 
     return (
         <div id="signup">
             <h1 className="p-8 text-center mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-white">
                 Sign-Up
             </h1>
-            <h2 className="p-8 text-center mb-4 text-4xl font-extrabold leading-none tracking-tight text-red-900 md:text-5xl lg:text-6xl dark:text-white">
+            <h3 className="p-8 text-center mb-4 text-4xl font-extrabold leading-none tracking-tight text-red-900 md:text-5xl lg:text-6xl dark:text-white">
                 { error }
-            </h2>
+            </h3>
             <form method="post" action="/signup" className="mb-6">
                 <div className="py-1 px-8 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                     <label htmlFor="username">Username</label>

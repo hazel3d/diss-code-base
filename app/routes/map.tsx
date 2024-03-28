@@ -6,13 +6,13 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin, } from "@vis.gl/reac
 
 const prisma = new PrismaClient();
 
-// For this part of the database the longitude tag was repurposed as pluscode
 export async function loader() {
     const locationsFromServer = await prisma.location.findMany();
     const geoApiKey = process.env.GEO_API_KEY;
     const apiKey = process.env.API_KEY;
     const promises: Promise<any>[] = [];
 
+    // For each location on the server, take the pluscode and process it into coords, then rebuild the object
     locationsFromServer.forEach((location) => {
         promises.push(fetch(encodeURI(`https://plus.codes/api?address=${location.pluscode}&key=${geoApiKey}`).replace('+', '%2B'))
             .then(response => response.json())
@@ -31,6 +31,7 @@ export default function Index() {
     const position = { lat: 55.862, lng: -4.247 };
     const colour = ["red", "orange", "yellow", "olive", "lime"];
 
+    // Returning a map and for each location placing a pin with a corespending info box
     return (
         <APIProvider apiKey={apiKey ?? ""}>
             <div id="map" className="absolute size-full h-[calc(100vh-80px)]">

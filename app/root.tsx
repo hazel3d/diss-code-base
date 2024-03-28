@@ -1,11 +1,18 @@
 import styles from "./tailwind.css";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import { Link, Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 import { ReactNode } from "react";
 
 export const links: LinksFunction = () => [
   ...(styles ? [{ rel: "stylesheet", href: styles }] : []),
 ];
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: "Trans-Maps" },
+    { name: "description", content: "Trans-Maps - A trans review website." },
+  ];
+}
 
 // The whole website is rendered inside of this
 export default function App() {

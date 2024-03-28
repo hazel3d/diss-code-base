@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient();
 
+// When someone reviews a place this uploads the review to the database and redirects them to the map
 export async function action({ request }: ActionFunctionArgs) {
     const formData = await request.formData();
     const pluscode = formData.get('pluscode')?.toString() ?? "";
