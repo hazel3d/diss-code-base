@@ -10,9 +10,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
     if (session != "") {
         return redirect("/profile");
     }
+
+    return json({ message: "" });
 }
 
-export const action = async ({ request }: ActionFunctionArgs) => {
+export async function action({ request }: ActionFunctionArgs) {
     const formData = await request.formData();
     const username = formData.get('username')?.toString() ?? "";
     const password = formData.get('password')?.toString() ?? "";
@@ -27,17 +29,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             }
         })
 
-        new Response("", {
+        return new Response("", {
             headers: {
                 "Set-Cookie": ("user=" + username)
             }
         });
-
-        return redirect("/profile");
     }
 
     return json({ message: "User already exists." });
-};
+}
 
 export default function Index() {
     const error = useActionData<typeof action>()?.message ?? "";

@@ -1,13 +1,14 @@
-import { json, redirect, type ActionFunctionArgs} from '@remix-run/node';
+import { json, redirect, type ActionFunctionArgs, LoaderFunctionArgs} from '@remix-run/node';
 import { PrismaClient } from '@prisma/client'
 import { useLoaderData } from '@remix-run/react';
 
 const prisma = new PrismaClient();
 
 // Loading in all of the posts and people who have posted when the page loads
-export async function loader() {
+export async function loader({ request }: LoaderFunctionArgs) {
     const posts = await prisma.post.findMany();
     const userIds: Array<number> = [];
+    const username = request.headers.get("cookie")?.split('=')[1] ?? "";
     
     // Adds all users that have posted to an array to search up
     posts.forEach( (post) => {
@@ -22,28 +23,46 @@ export async function loader() {
         select: { id: true, username: true}
     });
 
-    return json({posts, users})
+    return json({posts, users, username})
 }
 
 // Runs on submission of post on the forum
-export const action = async ({ request }: ActionFunctionArgs) => {
+export async function action({ request }: ActionFunctionArgs) {
     const formData = await request.formData();
     const title = formData.get('title')?.toString() ?? "";
     const comment = formData.get('comment')?.toString() ?? "";
+    const username = request.headers.get("cookie")?.split('=')[1] ?? "";
+    const user = await prisma.user.findFirst({ where: { username: username } });
+
+    if (user == null){
+        return redirect("/profile");
+    }
 
     await prisma.post.create({
         data: {
             title: title ,
             body: comment,
-            authorId: 1
+            authorId: user.id
         }
     })
 
     return redirect("/forum");
-};
+}
 
 export default function Index() {
-    const { posts, users } = useLoaderData<typeof loader>();
+    const { posts, users, username } = useLoaderData<typeof loader>();
+
+    if(username == ""){
+        return (
+            <p className = "text-center p-10" >
+                <h1 className="p-4 mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-white">
+                    Forum
+                </h1>
+                
+                You are not currently logged in. Please log in to access the forum.
+            </p>
+        )
+    }
 
     return (
         <div id="forum">
@@ -51,13 +70,13 @@ export default function Index() {
                 Forum
             </h1>
             <div id="feed">
-                <section className="py-8 lg:py-16">
+                <section className="py-4 lg:py-16">
                     <div className="max-w-fit mx-auto px-4">
-
                         {/* Form for submitting a post */}
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Make a Post</h2>
+                            <p> Posting under the username: {username} </p>
                         </div>
+                        <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">Make a Post</h2>
                         <form method="post" action="/forum" className="mb-6">
                             <div className="py-1 px-8 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                                 <label htmlFor="title">Title</label>
@@ -103,16 +122,9 @@ export default function Index() {
                                 </footer>
                                 <p className="text-gray-500 dark:text-gray-400"> { p.body } </p>
                                 <div className="flex items-center mt-4 space-x-4">
-                                    <button type="button"
-                                        className="flex items-center text-sm text-gray-500 hover:underline dark:text-gray-400 font-medium">
-                                        <svg className="mr-1.5 w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 18">
-                                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5h5M5 8h2m6-3h2m-5 3h6m2-7H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3v5l5-5h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1Z" />
-                                        </svg>
-                                        Reply
-                                        <p className="px-5"> 
-                                            { users.find((user) => user.id === p.authorId)?.username ?? "" }
-                                        </p>
-                                    </button>
+                                    <p className="px-5"> 
+                                        { users.find((user) => user.id === p.authorId)?.username ?? "" }
+                                    </p>
                                 </div>
                             </article>
                         ))}    

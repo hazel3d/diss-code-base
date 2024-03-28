@@ -10,6 +10,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     if (session != "") {
         return redirect("/profile");
     }
+
+    return json({ message: "" });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -24,13 +26,11 @@ export async function action({ request }: ActionFunctionArgs) {
 
     if (username == user.username && password == user.password) {
 
-        new Response("", {
+        return new Response("", {
             headers: {
                 "Set-Cookie": ("user=" + username)
             }
         });
-        
-        return redirect("/profile");
     }
 
     return json({ message: "Wrong login credentials." });
